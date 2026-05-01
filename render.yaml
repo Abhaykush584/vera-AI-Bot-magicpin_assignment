@@ -1,11 +1,16 @@
 services:
   - type: web
-    name: vera-bot
-    runtime: docker
-    envVars:
-      - key: ANTHROPIC_API_KEY
-        sync: false          # You set this manually in Render dashboard
-      - key: PORT
-        value: 8080
+    name: vera-magicpin-bot
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
     healthCheckPath: /v1/healthz
     autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: USE_LLM_COMPOSER
+        value: "false"
+      - key: ANTHROPIC_MODEL
+        value: claude-3-5-sonnet-20241022

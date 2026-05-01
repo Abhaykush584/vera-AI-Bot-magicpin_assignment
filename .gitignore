@@ -6,7 +6,6 @@ __pycache__/
 venv/
 env/
 submission.jsonl
+server.*.log
 *.egg-info/
 .DS_Store
-.idea/
-*.log

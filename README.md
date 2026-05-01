@@ -1,53 +1,75 @@
-# Vera Bot — magicpin AI Challenge
+# Vera Bot - magicpin AI Challenge Submission
 
 ## Approach
 
-### Core architecture: 4-context LLM composition
+This bot implements the required stateful FastAPI server for the magicpin Vera AI challenge:
 
-Every message is composed from all four context layers simultaneously:
+- `GET /v1/healthz`
+- `GET /v1/metadata`
+- `POST /v1/context`
+- `POST /v1/tick`
+- `POST /v1/reply`
 
+## Core Architecture
+
+1. **Versioned context store** - in-memory context keyed by `(scope, context_id)`. Same-version reposts are accepted no-ops; higher versions replace atomically.
+2. **Deterministic trigger routing** - `/tick` composes from trigger kind, merchant metrics, category voice, offer catalog, and customer facts. It caps output at 20 actions per tick.
+3. **Grounded message composer** - default path is pure Python, no network call, so replay behavior is stable and fast. Optional Claude composition is available with `USE_LLM_COMPOSER=true`.
+4. **Conversation state machine** - `/reply` handles opt-out, hostile replies, auto-replies, and clear intent transitions before using any fallback response.
+5. **Suppression tracking** - fired triggers and suppression keys prevent duplicate sends in the same run.
+
+## Model Choice
+
+Default submission mode is deterministic rule-based composition. This is intentional: the judge injects fresh facts and runs under a timeout, so stable grounded decisions are safer than 20 sequential LLM calls.
+
+Optional experimentation:
+
+```bash
+USE_LLM_COMPOSER=true
+ANTHROPIC_API_KEY=sk-ant-your-real-key
 ```
-compose(category, merchant, trigger, customer?) → {body, cta, send_as, suppression_key, rationale}
+
+## Quick Start
+
+```bash
+pip install -r requirements.txt
+python bot.py
 ```
 
-The system prompt encodes all hard rules (no URLs, no fabrication, service+price format, voice matching, owner first name), all compulsion levers, and the "why-now" rule that forces every message to make the trigger kind explicit.
+Bot URL:
 
-**Routing by trigger kind** — rather than a single generic prompt, the trigger kind informs the framing. A `research_digest` trigger gets a clinical-peer framing with source citation. A `perf_dip` trigger gets a reframe strategy (seasonal? actionable?). A `curious_ask_due` trigger gets the asking-the-merchant pattern. This is implemented as structured context blocks in the user prompt, not separate prompt files — the LLM infers the right voice.
+```text
+http://localhost:8080
+```
 
-### Conversation state machine
+Health check:
 
-Every conversation tracks state through 6 tiers (evaluated in priority order per turn):
+```bash
+curl http://localhost:8080/v1/healthz
+curl http://localhost:8080/v1/metadata
+```
 
-1. **Opt-out detection** (regex over 12 patterns) → end + suppress suppression_key permanently
-2. **Hostile detection** → one-line graceful exit with re-opt-in path ("reply 'Hi Vera' anytime")
-3. **Auto-reply detection** (regex + repeat counting) → staged: flag once → wait 24h → end
-4. **Intent-transition detection** (yes/haan/karo/go ahead, max turn 4) → immediately switch to action mode; write the artifact, give binary CTA, never ask another qualifying question
-5. **Off-topic redirect** (GST, taxes, unrelated) → one-line decline + thread redirect
-6. **General LLM reply** with conversation history injected
+## Docker
 
-### Specificity wins: no hallucination
+```bash
+docker build -t vera-bot .
+docker run -p 8080:8080 vera-bot
+```
 
-The compose prompt explicitly labels every number as "use ONLY facts from these contexts" and includes the most relevant digest item, peer stats, and offer catalog. Numbers without provenance in the context are blocked by the system prompt instruction.
+## Deployment
 
-### Anti-repetition
+Deploy the Docker image or Python app to Railway, Render, Fly.io, or any HTTPS host. Submit the public base URL, for example:
 
-Every conversation record stores `last_vera_body`. The compose prompt includes this as a "DO NOT REPEAT" block. The judge penalizes -2 per repeated body.
+```text
+https://your-bot.example.com
+```
 
----
+The judge will call:
 
-## Tradeoffs
-
-| Choice | Why | Cost |
-|---|---|---|
-| In-memory state only | Zero setup, survives the 45-60min test window | Data lost on restart — add Redis for production |
-| Single-prompt composition | Simpler, no retrieval overhead, fits all 4 contexts in ~800 tokens | Slightly higher per-call latency vs cached responses |
-| temperature=0 | Deterministic for same input — judge can replay | No variation; if the first composition is wrong, retries won't help |
-| Synchronous tick | Simpler code, avoids async complexity | With 20 triggers in one tick, could approach 30s limit; mitigated by returning early |
-| Regex for auto-reply / intent | Fast, zero API cost, covers the common cases | Will miss novel phrasing; a classifier would be better for production |
-
-## What additional context would help most
-
-1. **Real auto-reply corpus** — a labelled set of real WA Business auto-reply messages to train a better detector (regex misses regional variants like Marathi/Tamil)
-2. **Offer acceptance rate by trigger kind** — which compulsion lever works best for which category × trigger combination
-3. **Peer comparison at locality level** — the data has city-level peer stats; locality-level (Lajpat Nagar vs Hauz Khas) would make specificity much sharper
-4. **Conversation cadence history** — knowing how many times a merchant has been nudged in the last 7 days to prevent over-messaging before the judge even checks
+```text
+POST /v1/context
+POST /v1/tick
+POST /v1/reply
+GET  /v1/healthz
+GET  /v1/metadata
+```
