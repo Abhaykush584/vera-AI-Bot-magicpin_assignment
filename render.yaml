@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: vera-bot
+    runtime: docker
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false          # You set this manually in Render dashboard
+      - key: PORT
+        value: 8080
+    healthCheckPath: /v1/healthz
+    autoDeploy: true

@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+submission.jsonl
+*.egg-info/
+.DS_Store
+.idea/
+*.log

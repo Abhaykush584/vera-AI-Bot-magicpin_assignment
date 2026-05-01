@@ -1,0 +1,31 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Vera Bot",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["bot:app", "--host", "0.0.0.0", "--port", "8080", "--reload"],
+      "envFile": "${workspaceFolder}/.env",
+      "justMyCode": true
+    },
+    {
+      "name": "Generate submission.jsonl",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/generate_submission.py",
+      "envFile": "${workspaceFolder}/.env",
+      "justMyCode": true
+    },
+    {
+      "name": "Expand dataset",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/generate_dataset.py",
+      "args": ["--seed-dir", "dataset", "--out", "expanded"],
+      "cwd": "${workspaceFolder}",
+      "justMyCode": true
+    }
+  ]
+}
