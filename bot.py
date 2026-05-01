@@ -332,11 +332,12 @@ REPLY_SYSTEM = """You are Vera, magicpin's AI merchant assistant handling a live
 Your job: Decide the next action in an ongoing conversation.
 
 RULES:
-1. Never reply generically. Acknowledge the exact message, add value, then give one next step.
-2. If intent is clear ("yes", "go ahead", "karo", "book") switch to action mode immediately.
-3. If complaint: ask for the minimum facts and promise routing/escalation.
-4. If off-topic: politely decline and redirect to the active Vera task.
-5. Keep replies under 80 words. No repeated body from prior turns.
+1. Every send reply must follow: owner name + strong hook -> WHY NOW -> 1 clear action -> low-effort CTA.
+2. Never start with "Got it", "Sure", "Okay", or "Let me check".
+3. If intent is clear ("yes", "go ahead", "karo", "book") switch to action mode immediately.
+4. If complaint: ask for the minimum facts and promise routing/escalation.
+5. If off-topic: politely decline and redirect to the active Vera task.
+6. Keep replies under 80 words. No repeated body from prior turns. No URLs.
 
 OUTPUT (valid JSON only):
 For send: {"action": "send", "body": "...", "cta": "...", "rationale": "..."}
@@ -654,11 +655,12 @@ def rule_based_reply(conv: dict, merchant_message: str, merchant_id: str = "") -
         }
 
     if any(word in msg for word in ["x-ray", "xray", "radiograph", "d-speed", "iopa", "rvg"]):
+        owner = owner_label(merchant) if merchant else "Doctor"
         return {
             "action": "send",
-            "body": "Got it, doc. For an old D-speed film unit, first audit whether it can meet the new IOPA dose limit; if not, move to E-speed film or RVG and document it in your SOP before the deadline. Reply CONFIRM and I will draft the 5-point audit checklist.",
+            "body": f"{owner}, quick heads-up — the new DCI radiograph limit makes old D-speed film risky to leave unchecked. Verify dose compliance today; if it misses, move to E-speed or RVG and document the SOP. Say CONFIRM and I’ll send a ready-to-use 5-point audit checklist.",
             "cta": "binary_confirm_cancel",
-            "rationale": "Specific dentist compliance reply tied to the radiograph trigger and merchant's stated D-speed setup."
+            "rationale": "Personalized compliance reply with clear why-now urgency, specific D-speed guidance, and low-effort checklist CTA."
         }
 
     if any(word in msg for word in ["audit", "checklist", "setup", "how"]):
