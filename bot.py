@@ -332,12 +332,13 @@ REPLY_SYSTEM = """You are Vera, magicpin's AI merchant assistant handling a live
 Your job: Decide the next action in an ongoing conversation.
 
 RULES:
-1. Every send reply must follow: owner name + strong hook -> WHY NOW -> 1 clear action -> low-effort CTA.
-2. Never start with "Got it", "Sure", "Okay", or "Let me check".
+1. Every send reply must follow: owner name + strong hook -> WHY NOW -> concrete output/action -> low-effort CTA.
+2. Never start with "Got it", "Sure", "Okay", "Done", or "Let me check".
 3. If intent is clear ("yes", "go ahead", "karo", "book") switch to action mode immediately.
 4. If complaint: ask for the minimum facts and promise routing/escalation.
 5. If off-topic: politely decline and redirect to the active Vera task.
 6. Keep replies under 80 words. No repeated body from prior turns. No URLs.
+7. In action mode, show an actual draft/checklist/offer, not a promise to make one later.
 
 OUTPUT (valid JSON only):
 For send: {"action": "send", "body": "...", "cta": "...", "rationale": "..."}
@@ -620,6 +621,9 @@ def rule_based_reply(conv: dict, merchant_message: str, merchant_id: str = "") -
     msg = merchant_message.lower().strip()
     merchant = get_ctx("merchant", merchant_id) if merchant_id else None
     category_slug = (merchant or {}).get("category_slug", "")
+    owner = owner_label(merchant) if merchant else "Team"
+    category = get_ctx("category", category_slug) if category_slug else {}
+    offer = active_offer(merchant, category) if merchant else "the active offer"
     last_vera = next((t.get("msg", "") for t in reversed(conv.get("turns", [])) if t.get("from") == "vera"), "")
     role = (conv.get("turns", [])[-1].get("from") if conv.get("turns") else "merchant") or "merchant"
 
@@ -627,7 +631,7 @@ def rule_based_reply(conv: dict, merchant_message: str, merchant_id: str = "") -
         if any(word in msg for word in ["complaint", "bad", "late", "refund", "wrong", "issue", "problem"]):
             return {
                 "action": "send",
-                "body": "Sorry about that. Please share what happened, plus your visit/order date. I will pass the exact issue to the merchant team and ask them to respond with the next step.",
+                "body": "Sorry about this — let’s fix it quickly. Please share the visit/order date and what went wrong. I’ll pass the exact complaint to the merchant team so they can respond with the right next step.",
                 "cta": "open_ended",
                 "rationale": "Customer complaint detected; asks for the minimum facts needed to route the issue."
             }
@@ -641,7 +645,7 @@ def rule_based_reply(conv: dict, merchant_message: str, merchant_id: str = "") -
         if is_intent_transition(merchant_message) or any(word in msg for word in ["book", "confirm", "slot", "wed", "thu"]):
             return {
                 "action": "send",
-                "body": "Confirmed. I will hold the requested slot and share it with the merchant. Reply CHANGE if the time needs to be adjusted.",
+                "body": "Slot request received. I’ll share this exact time with the merchant now; if it’s unavailable, they’ll suggest the closest option. Reply CHANGE if you want another time.",
                 "cta": "binary_confirm_cancel",
                 "rationale": "Customer accepted a booking/reminder flow; confirms action with one escape hatch."
             }
@@ -649,7 +653,7 @@ def rule_based_reply(conv: dict, merchant_message: str, merchant_id: str = "") -
     if any(word in msg for word in ["gst", "tax filing", "income tax"]):
         return {
             "action": "send",
-            "body": "GST filing is outside what I can handle directly; your CA is the right person there. Coming back to this campaign, I can prepare the merchant/customer message now. Reply YES to continue, STOP to skip.",
+            "body": f"{owner}, GST filing is for your CA. Why now: this Vera thread is about the active merchant action, so I’ll keep momentum here. I can use {offer} and draft one customer-ready message now. Reply YES to use it, STOP to skip.",
             "cta": "binary_yes_stop",
             "rationale": "Out-of-scope request declined while returning to the original Vera task."
         }
@@ -666,7 +670,7 @@ def rule_based_reply(conv: dict, merchant_message: str, merchant_id: str = "") -
     if any(word in msg for word in ["audit", "checklist", "setup", "how"]):
         return {
             "action": "send",
-            "body": "Good. I’ll make this actionable: 1) list current setup, 2) compare against the trigger requirement, 3) mark gaps, 4) draft the customer/staff note if needed. Reply CONFIRM and I’ll prepare the checklist.",
+            "body": f"{owner}, quick action plan for today: checklist draft — 1) current setup, 2) rule/trigger gap, 3) risk level, 4) fix owner, 5) SOP note. Say CONFIRM and I’ll format this for your team.",
             "cta": "binary_confirm_cancel",
             "rationale": "Merchant asks for execution help; converts to a concrete checklist workflow."
         }
@@ -675,7 +679,7 @@ def rule_based_reply(conv: dict, merchant_message: str, merchant_id: str = "") -
         scope = primary_metric_count(merchant) if merchant else "the selected audience"
         return {
             "action": "send",
-            "body": f"Done. I will move this from idea to action using the last draft and target {scope}. Reply CONFIRM to approve the send, or CANCEL to stop.",
+            "body": f"{owner}, action mode: I’ve drafted this for {scope}: “{offer} — limited slots today. Reply YES and we’ll hold one for you.” Reply CONFIRM to approve, or CANCEL to stop.",
             "cta": "binary_confirm_cancel",
             "rationale": f"Merchant showed intent; moving to action mode from: {last_vera[:80]}"
         }
@@ -691,14 +695,14 @@ def rule_based_reply(conv: dict, merchant_message: str, merchant_id: str = "") -
         offer = active_offer(merchant, get_ctx("category", category_slug) or {}) if merchant else "the active offer"
         return {
             "action": "send",
-            "body": f"Use the concrete offer, not a generic discount: {offer}. I can turn it into one short WhatsApp with a single YES/STOP CTA. Reply YES to draft it.",
+            "body": f"{owner}, use the concrete offer, not a generic discount: {offer}. Draft: “{offer} available today — reply YES and we’ll hold it.” Reply CONFIRM to use this, CANCEL to stop.",
             "cta": "binary_yes_stop",
             "rationale": "Merchant asked about commercial framing; returns to service+price specificity."
         }
 
     return {
         "action": "send",
-        "body": "Got it. I will keep this focused on the current Vera action and avoid extra questions. Reply YES to proceed with the draft, or STOP to skip.",
+        "body": f"{owner}, why now: this reply needs a concrete next step, not another question. Draft: “{offer} available today — reply YES and we’ll hold it.” Reply CONFIRM to use it, CANCEL to stop.",
         "cta": "binary_yes_stop",
         "rationale": "Rule-based reply keeps the conversation moving with a single low-friction CTA."
     }
@@ -1065,12 +1069,7 @@ async def reply(body: ReplyBody):
     # 4. Intent transition: merchant said yes → action mode
     if is_intent_transition(merchant_message) and body.turn_number <= 3:
         if not USE_LLM_COMPOSER:
-            result = {
-                "action": "send",
-                "body": "Done. I will use the campaign we just discussed and keep it to one clear CTA. Reply CONFIRM to approve the send, or CANCEL to stop.",
-                "cta": "binary_confirm_cancel",
-                "rationale": "Merchant confirmed intent; switching directly to action mode."
-            }
+            result = rule_based_reply(conv, merchant_message, merchant_id)
             conv["turns"].append({"from": "vera", "msg": result["body"], "ts": body.received_at})
             return result
 
@@ -1088,10 +1087,11 @@ Merchant: {json.dumps(merchant.get('identity', {})) if merchant else 'Unknown'}
 Category: {cat_slug}
 Active offers: {json.dumps([o['title'] for o in (merchant or {}).get('offers', []) if o.get('status') == 'active']) if merchant else []}
 
-Write a SHORT (50-80 word) action-confirmation message that:
-1. Acknowledges their yes
-2. States exactly what you're doing/have done
-3. Gives ONE concrete next step with a binary CTA
+Write a SHORT (50-80 word) action-mode message that:
+1. Starts with owner name + hook, never "Got it/Done/Sure"
+2. States WHY NOW from the prior trigger/conversation
+3. Includes an actual draft/checklist/offer line, not a promise
+4. Gives ONE binary CTA with clear benefit
 
 Output valid JSON: {{"body": "...", "cta": "binary_confirm_cancel", "rationale": "..."}}"""
 
