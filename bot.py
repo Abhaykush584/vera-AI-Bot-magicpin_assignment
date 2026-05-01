@@ -535,12 +535,12 @@ def trigger_body(category: dict, merchant: dict, trigger: dict, customer: Option
 
     if kind in {"perf_dip", "seasonal_perf_dip"}:
         delta = perf.get("delta_7d", {})
-        body = f"{name}, why now: your 7-day demand is slipping — calls {pct(delta.get('calls_pct'))}, views {pct(delta.get('views_pct'))}. {fact} That is missed intent in {locality}. I can draft a recovery {action_item} around {offer_or_action(merchant, category)}. Reply YES to run it, STOP to skip."
+        body = f"{name}, demand is slipping today — calls {pct(delta.get('calls_pct'))}, views {pct(delta.get('views_pct'))}. {fact} That is missed intent in {locality}. I can prepare a recovery {action_item} around {offer_or_action(merchant, category)}. Reply YES to run it, STOP to skip."
         return body, cta, send_as, suppression_key
 
     if kind == "perf_spike":
         delta = perf.get("delta_7d", {})
-        body = f"{name}, why now: demand is spiking today — 7-day views {pct(delta.get('views_pct'))}, calls {pct(delta.get('calls_pct'))}. {fact} Before this cools off, I can turn {offer_or_action(merchant, category)} into a tight follow-up campaign. Reply YES to launch, STOP to skip."
+        body = f"{name}, demand is spiking today — 7-day views {pct(delta.get('views_pct'))}, calls {pct(delta.get('calls_pct'))}. {fact} Before this cools off, I can turn {offer_or_action(merchant, category)} into a tight follow-up campaign. Reply YES to launch, STOP to skip."
         return body, cta, send_as, suppression_key
 
     if kind == "ipl_match_today":
@@ -548,35 +548,35 @@ def trigger_body(category: dict, merchant: dict, trigger: dict, customer: Option
         venue = payload.get("venue", city)
         time_txt = payload.get("match_time_iso", "").split("T")[-1][:5] or "tonight"
         if payload.get("is_weeknight") is False:
-            body = f"{name}, why now: {match} at {venue} starts {time_txt}. Since it is not a weeknight, avoid a dine-in discount; push {offer} as a delivery-first match special instead. {fact} I’ll draft the banner + WhatsApp copy. Reply YES to use it, STOP to skip."
+            body = f"{name}, {match} at {venue} starts {time_txt} today. Since it is not a weeknight, avoid a dine-in discount; push {offer} as a delivery-first match special instead. {fact} I’ll prepare the banner + WhatsApp copy. Reply YES to use it, STOP to skip."
         else:
             body = f"{name}, {match} at {venue} starts {time_txt}. This is a timely dinner hook for {city}. {fact} I can turn {offer} into a match-night delivery message. Reply YES to draft, STOP to skip."
         return body, "binary_yes_stop", send_as, suppression_key
 
     if kind in {"festival_upcoming", "category_seasonal"}:
         trends = payload.get("trends") or payload.get("event") or payload.get("festival") or payload.get("season") or "this week"
-        body = f"{name}, why now: {compact_value(trends)} gives you a timely hook in {city}. {fact} I can draft a same-day {action_item} around {offer_or_action(merchant, category)} so you are not late to the demand window. Reply YES to send, STOP to skip."
+        body = f"{name}, {compact_value(trends)} gives you a timely hook in {city} today. {fact} I can prepare a same-day {action_item} around {offer_or_action(merchant, category)} so you are not late to the demand window. Reply YES to send, STOP to skip."
         return body, cta, send_as, suppression_key
 
     if kind == "competitor_opened":
         comp = payload.get("competitor_name") or payload.get("competitor") or "a new competitor"
         distance = payload.get("distance_km") or payload.get("distance") or "nearby"
-        body = f"{name}, why now: {comp} has opened {distance} from {locality}. {fact} That can pull nearby searches away this week. I can send a defensive {action_item} using {offer_or_action(merchant, category)} before they capture intent. Reply YES to run it, STOP to skip."
+        body = f"{name}, {comp} has opened {distance} from {locality}. {fact} That can pull nearby searches away this week. I can send a defensive {action_item} using {offer_or_action(merchant, category)} before they capture intent. Reply YES to run it, STOP to skip."
         return body, cta, send_as, suppression_key
 
     if kind == "review_theme_emerged":
         theme = (merchant.get("review_themes") or [{}])[0]
-        body = f"{name}, why now: reviews now mention {theme.get('theme', 'one theme')} {theme.get('occurrences_30d', '')} times in 30 days. Quote: {theme.get('common_quote', 'worth checking')}. I can draft a calm response and customer note before it becomes a pattern. Reply YES to use it, STOP to skip."
+        body = f"{name}, reviews now mention {theme.get('theme', 'one theme')} {theme.get('occurrences_30d', '')} times in 30 days. Quote: {theme.get('common_quote', 'worth checking')}. I can prepare a calm response and customer note before it becomes a pattern. Reply YES to use it, STOP to skip."
         return body, cta, send_as, suppression_key
 
     if kind == "milestone_reached":
         milestone = payload.get("milestone") or payload.get("metric") or "a new milestone"
-        body = f"{name}, why now: you just hit {milestone}. {fact} This is fresh social proof, so I can turn it into a thank-you {action_item} around {offer_or_action(merchant, category)} for warm customers. Reply YES to send, STOP to skip."
+        body = f"{name}, you just hit {milestone}. {fact} This is fresh social proof, so I can turn it into a thank-you {action_item} around {offer_or_action(merchant, category)} for warm customers. Reply YES to send, STOP to skip."
         return body, cta, send_as, suppression_key
 
     if kind == "renewal_due":
         days = subs.get("days_remaining", payload.get("days_remaining", "soon"))
-        body = f"{name}, why now: your {subs.get('plan', 'Vera')} plan has {days} days left. {fact} Let’s create one measurable win before renewal using {offer_or_action(merchant, category)}. I’ll draft it and keep the CTA simple. Reply YES to queue it, STOP to skip."
+        body = f"{name}, your {subs.get('plan', 'Vera')} plan has {days} days left. {fact} Let’s create one measurable win before renewal using {offer_or_action(merchant, category)}. I’ll prepare it with one clear CTA. Reply YES to queue it, STOP to skip."
         return body, cta, send_as, suppression_key
 
     if kind == "supply_alert":
@@ -584,7 +584,7 @@ def trigger_body(category: dict, merchant: dict, trigger: dict, customer: Option
         batches = safe_join(payload.get("affected_batches"))
         manufacturer = payload.get("manufacturer", "manufacturer")
         count = merchant.get("customer_aggregate", {}).get("chronic_rx_count", "your chronic-Rx")
-        body = f"{name}, why now: urgent pharmacy alert from {manufacturer} for {molecule} batches {batches}. You have {count} chronic-Rx customers in your data. I can draft the customer note plus replacement-pickup workflow so this is handled cleanly today. Reply YES to prepare it, STOP to skip."
+        body = f"{name}, urgent pharmacy alert today from {manufacturer} for {molecule} batches {batches}. You have {count} chronic-Rx customers in your data. I can prepare the customer note plus replacement-pickup workflow so this is handled cleanly today. Reply YES to prepare it, STOP to skip."
         return body, "binary_yes_stop", send_as, suppression_key
 
     if kind == "active_planning_intent":
@@ -601,10 +601,10 @@ def trigger_body(category: dict, merchant: dict, trigger: dict, customer: Option
 
     if kind in {"curious_ask_due", "dormant_with_vera", "gbp_unverified"}:
         topic = payload.get("intent_topic") or payload.get("merchant_last_message") or payload.get("topic") or kind.replace("_", " ")
-        body = f"{name}, why now: {str(topic).replace('_', ' ')} is due for a light-touch check-in. {fact} Reply with the service customers ask about most this week; I’ll turn it into a Google post and WhatsApp reply in 5 minutes."
+        body = f"{name}, {str(topic).replace('_', ' ')} is due for a light-touch check-in today. {fact} Reply with the service customers ask about most this week; I’ll turn it into a Google post and WhatsApp reply in 5 minutes."
         return body, cta, send_as, suppression_key
 
-    body = f"{name}, why now: {kind.replace('_', ' ')} just fired for {identity.get('name', 'your business')}. {fact} I can turn this into one focused {action_item} using {offer_or_action(merchant, category)}. Reply YES to draft, STOP to skip."
+    body = f"{name}, {kind.replace('_', ' ')} needs attention today for {identity.get('name', 'your business')}. {fact} I can turn this into one focused {action_item} using {offer_or_action(merchant, category)}. Reply YES to prepare it, STOP to skip."
     return body, cta, send_as, suppression_key
 
 def deterministic_compose(category: dict, merchant: dict, trigger: dict, customer: Optional[dict] = None) -> dict:
@@ -621,7 +621,7 @@ def rule_based_reply(conv: dict, merchant_message: str, merchant_id: str = "") -
     msg = merchant_message.lower().strip()
     merchant = get_ctx("merchant", merchant_id) if merchant_id else None
     category_slug = (merchant or {}).get("category_slug", "")
-    owner = owner_label(merchant) if merchant else "Team"
+    owner = owner_label(merchant) if merchant else "Vera"
     category = get_ctx("category", category_slug) if category_slug else {}
     offer = active_offer(merchant, category) if merchant else "the active offer"
     last_vera = next((t.get("msg", "") for t in reversed(conv.get("turns", [])) if t.get("from") == "vera"), "")
@@ -631,7 +631,7 @@ def rule_based_reply(conv: dict, merchant_message: str, merchant_id: str = "") -
         if any(word in msg for word in ["complaint", "bad", "late", "refund", "wrong", "issue", "problem"]):
             return {
                 "action": "send",
-                "body": "Sorry about this — let’s fix it quickly. Please share the visit/order date and what went wrong. I’ll pass the exact complaint to the merchant team so they can respond with the right next step.",
+                "body": "Sorry about this — let’s fix it quickly today. Please share the visit/order date and what went wrong. I’ll pass the exact issue to the store owner so they can respond with the right next step.",
                 "cta": "open_ended",
                 "rationale": "Customer complaint detected; asks for the minimum facts needed to route the issue."
             }
@@ -653,7 +653,7 @@ def rule_based_reply(conv: dict, merchant_message: str, merchant_id: str = "") -
     if any(word in msg for word in ["gst", "tax filing", "income tax"]):
         return {
             "action": "send",
-            "body": f"{owner}, GST filing is for your CA. Why now: this Vera thread is about the active merchant action, so I’ll keep momentum here. I can use {offer} and draft one customer-ready message now. Reply YES to use it, STOP to skip.",
+            "body": f"{owner}, GST filing is for your CA. This thread is about today’s active merchant action, so I’ll keep momentum here. I can use {offer} and prepare one customer-ready message now. Reply YES to use it, STOP to skip.",
             "cta": "binary_yes_stop",
             "rationale": "Out-of-scope request declined while returning to the original Vera task."
         }
@@ -670,7 +670,7 @@ def rule_based_reply(conv: dict, merchant_message: str, merchant_id: str = "") -
     if any(word in msg for word in ["audit", "checklist", "setup", "how"]):
         return {
             "action": "send",
-            "body": f"{owner}, quick action plan for today: checklist draft — 1) current setup, 2) rule/trigger gap, 3) risk level, 4) fix owner, 5) SOP note. Say CONFIRM and I’ll format this for your team.",
+            "body": f"{owner}, quick action plan for today: checklist — 1) current setup, 2) rule gap, 3) risk level, 4) fix owner, 5) SOP note. Say CONFIRM and I’ll format this for immediate use.",
             "cta": "binary_confirm_cancel",
             "rationale": "Merchant asks for execution help; converts to a concrete checklist workflow."
         }
@@ -679,7 +679,7 @@ def rule_based_reply(conv: dict, merchant_message: str, merchant_id: str = "") -
         scope = primary_metric_count(merchant) if merchant else "the selected audience"
         return {
             "action": "send",
-            "body": f"{owner}, action mode: I’ve drafted this for {scope}: “{offer} — limited slots today. Reply YES and we’ll hold one for you.” Reply CONFIRM to approve, or CANCEL to stop.",
+            "body": f"{owner}, I’ve prepared this for {scope}: “{offer} — limited slots today. Reply YES and we’ll hold one for you.” Reply CONFIRM to approve, or CANCEL to stop.",
             "cta": "binary_confirm_cancel",
             "rationale": f"Merchant showed intent; moving to action mode from: {last_vera[:80]}"
         }
@@ -695,14 +695,14 @@ def rule_based_reply(conv: dict, merchant_message: str, merchant_id: str = "") -
         offer = active_offer(merchant, get_ctx("category", category_slug) or {}) if merchant else "the active offer"
         return {
             "action": "send",
-            "body": f"{owner}, use the concrete offer, not a generic discount: {offer}. Draft: “{offer} available today — reply YES and we’ll hold it.” Reply CONFIRM to use this, CANCEL to stop.",
+            "body": f"{owner}, use the concrete offer, not a generic discount: {offer}. Message: “{offer} available today — reply YES and we’ll hold it.” Reply CONFIRM to use this, CANCEL to stop.",
             "cta": "binary_yes_stop",
             "rationale": "Merchant asked about commercial framing; returns to service+price specificity."
         }
 
     return {
         "action": "send",
-        "body": f"{owner}, why now: this reply needs a concrete next step, not another question. Draft: “{offer} available today — reply YES and we’ll hold it.” Reply CONFIRM to use it, CANCEL to stop.",
+        "body": f"{owner}, this needs a concrete next step today, not another question. Message: “{offer} available today — reply YES and we’ll hold it.” Reply CONFIRM to use it, CANCEL to stop.",
         "cta": "binary_yes_stop",
         "rationale": "Rule-based reply keeps the conversation moving with a single low-friction CTA."
     }
@@ -976,6 +976,46 @@ async def tick(body: TickBody):
         # Cap at 20 actions per tick
         if len(actions) >= 20:
             break
+
+    if not actions:
+        merchant = next((m for m in get_all_by_scope("merchant") if get_ctx("category", m.get("category_slug", ""))), None)
+        if merchant:
+            category = get_ctx("category", merchant.get("category_slug", ""))
+            fallback_trigger = {
+                "id": f"fallback_{merchant.get('merchant_id', 'merchant')}",
+                "kind": "curious_ask_due",
+                "source": "internal",
+                "merchant_id": merchant.get("merchant_id"),
+                "customer_id": None,
+                "payload": {"topic": "weekly customer demand check"},
+                "urgency": 1,
+                "suppression_key": f"fallback:{merchant.get('merchant_id')}:demand_check"
+            }
+            composed = deterministic_compose(category, merchant, fallback_trigger, None)
+            conv_id = f"conv_{merchant.get('merchant_id')}_fallback_{uuid.uuid4().hex[:6]}"
+            conversations[conv_id] = {
+                "merchant_id": merchant.get("merchant_id"),
+                "customer_id": None,
+                "trigger_id": fallback_trigger["id"],
+                "suppression_key": fallback_trigger["suppression_key"],
+                "state": "active",
+                "turns": [{"from": "vera", "msg": composed["body"], "ts": now}],
+                "auto_reply_count": 0,
+                "wait_until": None
+            }
+            actions.append({
+                "conversation_id": conv_id,
+                "merchant_id": merchant.get("merchant_id"),
+                "customer_id": None,
+                "send_as": "vera",
+                "trigger_id": fallback_trigger["id"],
+                "template_name": "vera_curious_ask_v1",
+                "template_params": [merchant.get("identity", {}).get("owner_first_name", ""), composed["body"][:100], ""],
+                "body": composed["body"],
+                "cta": composed.get("cta", "binary_yes_stop"),
+                "suppression_key": fallback_trigger["suppression_key"],
+                "rationale": "Safe fallback action from available merchant and category context."
+            })
     
     return {"actions": actions}
 
